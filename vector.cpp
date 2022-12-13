@@ -9,17 +9,6 @@ vector<T, A>::vector(const vector& arg)
     std::copy(arg.elem, arg.elem + arg.sz, elem);
 }
 
-
-/*vector& vector::operator=(const vector& a)
-{
-    T* p = new T[a.sz];
-    std::copy(a.elem, a.elem + a.sz, p);
-    delete[] elem;
-    elem = p;
-    sz = a.sz;
-    return *this;
-}*/
-
 template<class T, class A>
 vector<T, A>::vector(vector&& a)
     :sz{a.sz}, elem{a.elem}
