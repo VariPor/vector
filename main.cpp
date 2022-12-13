@@ -10,6 +10,20 @@ void print(vector<T> v)
     std::cout << '\n';
 }
 
+struct test
+{
+    int x;
+    char c;
+    bool b;
+    test() : x{0}, c{'a'}, b{true} {}
+    test(int xx, char cc, bool bb) : x{xx}, c{cc}, b{bb} {}
+};
+
+std::ostream& operator<<(std::ostream& os, const test&t)
+{
+    return os << t.x << ' ' << t.c << ' ' << t.b;
+}
+
 int main()
 {
     vector<int> v1{1, 2};
@@ -28,7 +42,11 @@ int main()
     vector <char> v14(3);
     vector<char> v15(3, '*');  
     vector<std::string> v16{3, "a"}; 
-    
+    vector <test> v17(3);
+    test t{3, 'l', false};
+    vector<test> v18{3, t};  
+    vector<test> v19{t};
+
     print(v1);
     print(v2);
     print(v3);
@@ -45,6 +63,9 @@ int main()
     print(v14);
     print(v15);
     print(v16);
+    print(v17);
+    print(v18);
+    print(v19);
     return 0;
 }
 
