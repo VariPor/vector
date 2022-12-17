@@ -65,7 +65,7 @@ public:
     ~vector()
     {
         for (int i = 0; i < sz; ++i)
-            alloc.destroy(this + i);
+            alloc.destroy(&elem[i]);
         alloc.deallocate(elem, space);
     }
     int size() const { return sz; }
@@ -133,6 +133,7 @@ int vector<T, A>::capacity() const { return space; }
 template <class T, class A>
 void vector<T, A>::resize(int newsize, T val)
 {
+    //if (newsize < sz) 
     reserve(newsize);
     for (int i = sz; i < newsize; ++i)
         alloc.construct(&elem[i], val);

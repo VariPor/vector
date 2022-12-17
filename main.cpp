@@ -110,5 +110,10 @@ int main()
     for (int i = 0; i < vv.size(); ++i)
         print(vv[i], " ");
 
+    vector<std::string> vs{"a", "b", "c"};
+    print(vs, "vs");
+    vs.push_back("tyyt");
+    print(vs, "vs");
+
     return 0;
 }
