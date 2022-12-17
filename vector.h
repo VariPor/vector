@@ -3,8 +3,9 @@
 #include <memory>
 #include <algorithm>
 #include <stdexcept>
+#include <iostream>
 
-template <class T, class A>
+template <class T, class A = std::allocator<T>>
 struct vector_base
 {
     A alloc;
@@ -12,30 +13,25 @@ struct vector_base
     T *elem;
     int space;
 
-    vector_base(const A &a, int n)
-        : alloc{a}, elem{alloc.allocate(n)}, sz{n}, space{0} {}
+    vector_base(int n)
+        : elem{alloc.allocate(n)}, sz{n}, space{n} {}
     vector_base()
         : elem{nullptr}, sz{0}, space{0} {}
     ~vector_base() { alloc.deallocate(elem, space); }
 };
 
 template <class T, class A = std::allocator<T>>
-// class vector : private vector_base<T, A>
-class vector
+class vector : private vector_base<T>
 {
-    A alloc;
-    int sz;
-    T *elem;
-    int space;
-
 public:
-    vector() : sz{0}, elem{alloc.allocate(0)}, space{0} {}
+    vector()
+        : vector_base<T>() {}
 
     explicit vector(int s, T val = T{})
-        : sz{s}, elem{alloc.allocate(s)}, space{s}
+        : vector_base<T>(s)
     {
         for (int i = 0; i < s; ++i)
-            alloc.construct(&elem[i], val);
+            this->alloc.construct(&this->elem[i], val);
     }
 
     vector(const vector &);
@@ -49,29 +45,30 @@ public:
 
     const T &operator[](int n) const
     {
-        return elem[n];
+        return this->elem[n];
     }
 
     T &operator[](int n)
     {
-        return (elem[n]);
+        return (this->elem[n]);
     }
 
     vector(std::initializer_list<T> lst)
-        : sz{lst.size()}, elem{alloc.allocate(lst.size())}, space{lst.size()}
+        : vector_base<T>(lst.size())
     {
-        std::copy(lst.begin(), lst.end(), elem);
+        for (int i = 0; i < lst.size(); ++i)
+            this->alloc.construct(this->elem+i, *(lst.begin() + i));
     }
+
     ~vector()
     {
-        for (int i = 0; i < sz; ++i)
-            alloc.destroy(&elem[i]);
-        alloc.deallocate(elem, space);
+        for (int i = 0; i < this->sz; ++i)
+            this->alloc.destroy(this->elem + i);
     }
-    int size() const { return sz; }
+    int size() const { return this->sz; }
 
-    T get(int n) const { return elem[n]; }
-    void set(int n, T v) { elem[n] = v; }
+    /*T get(int n) const { return (this->elem)[n]; }
+    void set(int n, T v) { (this->elem)[n] = v; }*/
 
     void reserve(int newalloc);
     int capacity() const;
@@ -82,15 +79,19 @@ public:
 
 template <class T, class A>
 vector<T, A>::vector(const vector &arg)
-    : sz{arg.sz}, elem{alloc.allocate(arg.sz)}, space{arg.sz}
+    : vector_base<T, A>(arg.sz)
 {
-    std::copy(arg.elem, arg.elem + arg.sz, elem);
+    for (int i = 0; i < arg.size(); ++i)
+        this->alloc.construct(this->elem + i, arg.elem[i]);
 }
 
 template <class T, class A>
 vector<T, A>::vector(vector &&a)
-    : sz{a.sz}, elem{a.elem}, space{a.sz}
 {
+    std::cout << "success\n";
+    this->sz = a.sz;
+    this->elem = a.elem;
+    this->space = a.sz;
     a.sz = 0;
     a.elem = nullptr;
 }
@@ -98,13 +99,13 @@ vector<T, A>::vector(vector &&a)
 template <class T, class A>
 vector<T, A> &vector<T, A>::operator=(vector &&a)
 {
-    //delete[] elem;
-    for (int i = 0; i < sz; ++i)
-        alloc.destroy(&elem[i]);
-    alloc.deallocate(elem, space);
-    elem = a.elem;
-    sz = a.sz;
-    space = a.sz;
+    std::cout << "success\n";
+    for (int i = 0; i < this->sz; ++i)
+        this->alloc.destroy(this->elem + i);
+    this->alloc.deallocate(this->elem, this->space);
+    this->elem = a.elem;
+    this->sz = a.sz;
+    this->space = a.sz;
     a.elem = nullptr;
     a.sz = 0;
     return *this;
@@ -113,44 +114,45 @@ vector<T, A> &vector<T, A>::operator=(vector &&a)
 template <class T, class A>
 void vector<T, A>::reserve(int newalloc)
 {
-    if (newalloc <= space)
+    if (newalloc <= this->space)
         return;
-    T *p = alloc.allocate(newalloc);
-    for (int i = 0; i < sz; ++i)
-        alloc.construct(&p[i], elem[i]);
+    T *p = this->alloc.allocate(newalloc);
+    for (int i = 0; i < this->sz; ++i)
+        this->alloc.construct(&p[i], (this->elem)[i]);
 
-    for (int i = 0; i < sz; ++i)
-        alloc.destroy(&elem[i]);
+    for (int i = 0; i < this->sz; ++i)
+        this->alloc.destroy(this->elem + i);
 
-    alloc.deallocate(elem, space);
-    elem = p;
-    space = newalloc;
+    this->alloc.deallocate(this->elem, this->space);
+    this->elem = p;
+    this->space = newalloc;
 }
 
 template <class T, class A>
-int vector<T, A>::capacity() const { return space; }
+int vector<T, A>::capacity() const { return this->space; }
 
 template <class T, class A>
 void vector<T, A>::resize(int newsize, T val)
 {
-    //if (newsize < sz) 
+    if (newsize < this->sz)
+        throw std::runtime_error("resize: newsize < size");
     reserve(newsize);
-    for (int i = sz; i < newsize; ++i)
-        alloc.construct(&elem[i], val);
-    for (int i = newsize; i < sz; ++i)
-        alloc.destroy(&elem[i]);
-    sz = newsize;
+    for (int i = this->sz; i < newsize; ++i)
+        this->alloc.construct(this->elem + i, val);
+    for (int i = newsize; i < this->sz; ++i)
+        this->alloc.destroy(this->elem + i);
+    this->sz = newsize;
 }
 
 template <class T, class A>
 void vector<T, A>::push_back(const T &val)
 {
-    if (space == 0)
+    if (this->space == 0)
         reserve(8);
-    else if (sz == space)
-        reserve(2 * space);
-    elem[sz] = val;
-    ++sz;
+    else if (this->sz == this->space)
+        reserve(2 * this->space);
+    this->alloc.construct(this->elem +this->sz, val);
+    ++(this->sz);
 }
 
 template <class T, class A>
@@ -159,43 +161,42 @@ vector<T, A> &vector<T, A>::operator=(const vector &a)
     if (this == &a)
         return *this;
 
-    if (a.sz <= space)
+    if (a.sz <= this->space)
     {
+        for (int i = 0; i < this->sz; ++i)
+            this->alloc.destroy(this->elem + i);
         for (int i = 0; i < a.sz; ++i)
-            elem[i] = a.elem[i];
-        sz = a.sz;
+            this->alloc.construct(this->elem + i, a.elem[i]);
+        this->sz = a.sz;
         return *this;
     }
 
-    T *p = alloc.allocate(a.sz);
+    T *p = this->alloc.allocate(a.sz);
 
     for (int i = 0; i < a.sz; ++i)
-        p[i] = a.elem[i];
+        this->alloc.construct(&p[i], a.elem[i]);
 
-    for (int i = 0; i < sz; ++i)
-        alloc.destroy(&elem[i]);
-        
-    alloc.deallocate(elem, space);
-    space = sz = a.sz;
-    elem = p;
+    for (int i = 0; i < this->sz; ++i)
+        this->alloc.destroy(this->elem + i);
+
+    this->alloc.deallocate(this->elem, this->space);
+    this->space = this->sz = a.sz;
+    this->elem = p;
     return *this;
 }
 
 template <class T, class A>
 T &vector<T, A>::at(int n)
 {
-    if (n < 0 || sz <= n)
+    if (n < 0 || this->sz <= n)
         throw std::out_of_range("out of range");
-    return elem[n];
+    return (this->elem)[n];
 }
 
 template <class T, class A>
 const T &vector<T, A>::at(int n) const
 {
-    if (n < 0 || sz <= n)
+    if (n < 0 || this->sz <= n)
         throw std::out_of_range("out of range");
-    return elem[n];
+    return (this->elem)[n];
 }
-
-// #include <vector>
-// std::vector<int>
