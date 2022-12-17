@@ -20,7 +20,8 @@ struct vector_base
 };
 
 template <class T, class A = std::allocator<T>>
-class vector : private vector_base<T, A>
+// class vector : private vector_base<T, A>
+class vector
 {
     A alloc;
     int sz;
@@ -28,13 +29,13 @@ class vector : private vector_base<T, A>
     int space;
 
 public:
-    vector() : sz{0}, elem{nullptr}, space{0} {}
+    vector() : sz{0}, elem{alloc.allocate(0)}, space{0} {}
 
     explicit vector(int s, T val = T{})
-        : sz{s}, elem{new T[sz]}, space{s}
+        : sz{s}, elem{alloc.allocate(s)}, space{s}
     {
         for (int i = 0; i < s; ++i)
-            elem[i] = val;
+            alloc.construct(&elem[i], val);
     }
 
     vector(const vector &);
@@ -50,17 +51,23 @@ public:
     {
         return elem[n];
     }
+
     T &operator[](int n)
     {
         return (elem[n]);
     }
 
     vector(std::initializer_list<T> lst)
-        : sz{lst.size()}, elem{new T[sz]}
+        : sz{lst.size()}, elem{alloc.allocate(lst.size())}, space{lst.size()}
     {
         std::copy(lst.begin(), lst.end(), elem);
     }
-    ~vector() { delete[] elem; }
+    ~vector()
+    {
+        for (int i = 0; i < sz; ++i)
+            alloc.destroy(this + i);
+        alloc.deallocate(elem, space);
+    }
     int size() const { return sz; }
 
     T get(int n) const { return elem[n]; }
@@ -75,14 +82,14 @@ public:
 
 template <class T, class A>
 vector<T, A>::vector(const vector &arg)
-    : sz{arg.sz}, elem(new T[arg.sz])
+    : sz{arg.sz}, elem{alloc.allocate(arg.sz)}, space{arg.sz}
 {
     std::copy(arg.elem, arg.elem + arg.sz, elem);
 }
 
 template <class T, class A>
 vector<T, A>::vector(vector &&a)
-    : sz{a.sz}, elem{a.elem}
+    : sz{a.sz}, elem{a.elem}, space{a.sz}
 {
     a.sz = 0;
     a.elem = nullptr;
@@ -91,9 +98,13 @@ vector<T, A>::vector(vector &&a)
 template <class T, class A>
 vector<T, A> &vector<T, A>::operator=(vector &&a)
 {
-    delete[] elem;
+    //delete[] elem;
+    for (int i = 0; i < sz; ++i)
+        alloc.destroy(&elem[i]);
+    alloc.deallocate(elem, space);
     elem = a.elem;
     sz = a.sz;
+    space = a.sz;
     a.elem = nullptr;
     a.sz = 0;
     return *this;
@@ -104,7 +115,7 @@ void vector<T, A>::reserve(int newalloc)
 {
     if (newalloc <= space)
         return;
-    T* p = alloc.allocate(newalloc);
+    T *p = alloc.allocate(newalloc);
     for (int i = 0; i < sz; ++i)
         alloc.construct(&p[i], elem[i]);
 
@@ -126,7 +137,7 @@ void vector<T, A>::resize(int newsize, T val)
     for (int i = sz; i < newsize; ++i)
         alloc.construct(&elem[i], val);
     for (int i = newsize; i < sz; ++i)
-        alloc.destroy(elem[i]);
+        alloc.destroy(&elem[i]);
     sz = newsize;
 }
 
@@ -137,7 +148,7 @@ void vector<T, A>::push_back(const T &val)
         reserve(8);
     else if (sz == space)
         reserve(2 * space);
-    alloc.construct(&elem[sz], val);
+    elem[sz] = val;
     ++sz;
 }
 
@@ -154,10 +165,16 @@ vector<T, A> &vector<T, A>::operator=(const vector &a)
         sz = a.sz;
         return *this;
     }
-    T *p = new T[a.sz];
+
+    T *p = alloc.allocate(a.sz);
+
     for (int i = 0; i < a.sz; ++i)
         p[i] = a.elem[i];
-    delete[] elem;
+
+    for (int i = 0; i < sz; ++i)
+        alloc.destroy(&elem[i]);
+        
+    alloc.deallocate(elem, space);
     space = sz = a.sz;
     elem = p;
     return *this;
@@ -178,3 +195,6 @@ const T &vector<T, A>::at(int n) const
         throw std::out_of_range("out of range");
     return elem[n];
 }
+
+// #include <vector>
+// std::vector<int>
