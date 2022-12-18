@@ -1,5 +1,5 @@
 #include "vector.h"
-#include <iostream>
+#include "classes.h"
 #include <string>
 
 template <class T>
@@ -15,7 +15,7 @@ void print_vector(vector<vector<T>> &v, std::string s)
 {
     std::cout << s << ":\n";
     for (int i = 0; i < v.size(); ++i)
-        for (int j = 0; j < (v[i]).size(); ++j)
+        for (int j = 0; j < v[i].size(); ++j)
         {
             //std::cout << v[i].size() << '\n';
             std::cout << "i = " << i << ", j = " << j << "; value: " << v[i][j] << '\n';
@@ -29,26 +29,10 @@ T f (T a)
     return a;
 }
 
-struct test
-{
-    int x;
-    char c;
-    bool b;
-    test() : x{0}, c{'a'}, b{true} {}
-    test(int xx, char cc, bool bb) : x{xx}, c{cc}, b{bb} {}
-    ~test() = default;
-};
-
-std::ostream& operator<<(std::ostream& os, const test&t)
-{
-    return os << t.x << ' ' << t.c << ' ' << t.b;
-}
-
-
 int main()
 try
 {
-    vector<int> v1{1, 2};
+    /*vector<int> v1{1, 2};
     print(v1, "v1");
     v1.push_back(30);
     print(v1, "v1");
@@ -210,7 +194,27 @@ try
     const vector<int> cvi{1, 2, 3};
     print(cvi, "cvi");
 
-    std::cout << cvi[1] << " - cvi[1]\n";
+    std::cout << cvi[1] << " - cvi[1]\n\n";
+
+    vector<int> vii;
+    vii.push_back(1);
+    print(vii, "vii");
+
+
+    vector<std::string> a(10, "777");
+    vector <std::string> b (5, "5");
+    b = a;
+    print(a, "a");*/
+
+    ExceptTest et1{4, '8', true};
+    ExceptTest et2{8, '7', false};
+    ExceptTest et3{7, 't', true};
+
+    std::cout << et1 << '\n' << et2 << '\n' << et3 << '\n';
+
+    vector<ExceptTest> et{et1, et2, et3, {-7, 't', true}};
+    vector<ExceptTest> ett(2, {-7, 't', true});
+    print(et, "et");
 
     return 0;
 }
@@ -221,6 +225,6 @@ catch (std::exception& e)
 }
 catch (...)
 {
-  std::cerr << "Oops, unknown exception" << std::endl;
+  std::cerr << "unknown exception" << std::endl;
   return 2;
 }
