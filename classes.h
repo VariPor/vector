@@ -27,7 +27,8 @@ struct ExceptTest
             if (xx < 0) throw std::runtime_error("xx < 0\n");
             x = new int (xx);
         }
-ExceptTest(const ExceptTest &arg)
+
+    ExceptTest(const ExceptTest &arg)
     : c{arg.c}, b{arg.b}
     {
         x = new int(*arg.x);
@@ -38,14 +39,16 @@ ExceptTest(const ExceptTest &arg)
         if (x != nullptr)
             delete x;
     }
+
     ExceptTest(ExceptTest &&a)
     :c{a.c}, b{a.b}
     {
         x = a.x;;
         a.x = nullptr;
     }
+    
     ExceptTest operator=(ExceptTest &&a)
-{
+    {
     delete x;
     c = a.c;
     b = a.c;
@@ -53,6 +56,7 @@ ExceptTest(const ExceptTest &arg)
     a.x = nullptr;
     return *this;
     }
+    
     ExceptTest operator=(const ExceptTest &a)
     {
         if (this == &a)

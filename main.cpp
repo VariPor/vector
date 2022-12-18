@@ -212,9 +212,16 @@ try
 
     std::cout << et1 << '\n' << et2 << '\n' << et3 << '\n';
 
-    vector<ExceptTest> et{et1, et2, et3, {-7, 't', true}};
-    vector<ExceptTest> ett(2, {-7, 't', true});
-    print(et, "et");
+    //vector<ExceptTest> et{et1, et2, et3, {-7, 't', true}};
+    //print(et, "et");
+
+    //vector<ExceptTest> ett(2, {-7, 't', true});
+    //print(ett, "ett");
+
+    vector<ExceptTest> ettt{et1};
+    print(ettt, "ettt");
+
+
 
     return 0;
 }

@@ -62,28 +62,25 @@ public:
 
 template <class T, class A>
 vector<T, A>::vector(const vector &arg)
-    try
     : vector_base<T, A>(arg.sz)
         {
-            for (int i = 0; i < arg.size(); ++i)
+            int init = 0;
+            try
             {
-                this->sz = i + 1;
-                this->alloc.construct(this->elem + i, arg.elem[i]);
+                for (int i = 0; i < arg.size(); ++i)
+                {
+                    init = i + 1;
+                    this->alloc.construct(this->elem + i, arg.elem[i]);
+                }
+            }
+            catch (...) 
+            { 
+                for (int j = 0; j < init; ++j)
+                    this->alloc.destroy(&this->elem[j]);
+                this->sz = 0;
+                throw; 
             }
         }
-    catch (std::exception& e) 
-    { 
-        for (int j = 0; j < this->sz; ++j)
-            this->alloc.destroy(&this->elem[j]);
-        this->sz = 0;
-        throw e; }
-    catch (...) 
-    { 
-        for (int j = 0; j < this->sz; ++j)
-            this->alloc.destroy(&this->elem[j]);
-        this->sz = 0;
-        throw "unknown exception"; 
-    }
 
 template <class T, class A>
 vector<T, A>::vector(vector &&a)
@@ -117,7 +114,7 @@ void vector<T, A>::reserve(int newalloc)
     if (newalloc <= this->space)
             return;
         T *p = this->alloc.allocate(newalloc);
-        int init = 0;
+    int init = 0;
     try
     {
         for (int i = 0; i < this->sz; ++i)
@@ -133,20 +130,12 @@ void vector<T, A>::reserve(int newalloc)
         this->elem = p;
         this->space = newalloc;
     }
-
-    catch (std::exception& e) 
-    { 
-        for (int j = 0; j < init; ++j)
-            this->alloc.destroy(&p[j]);
-        this->alloc.deallocate(p, this->sz);
-        throw e; 
-    }
     catch (...) 
     { 
         for (int j = 0; j < init; ++j)
             this->alloc.destroy(&p[j]);
         this->alloc.deallocate(p, this->sz);
-        throw "unknown exception"; 
+        throw; 
     }
 }
 
@@ -155,35 +144,30 @@ int vector<T, A>::capacity() const { return this->space; }
 
 template <class T, class A>
 void vector<T, A>::resize(int newsize, T val)
+{
+    if (newsize < this->sz)
+            throw std::runtime_error("resize: newsize < size");
+    reserve(newsize);
+    int init = 0;
     try
     {
-        if (newsize < this->sz)
-            throw std::runtime_error("resize: newsize < size");
-        reserve(newsize);
-        int init = this->sz;
-        for (int i = init; i < newsize; ++i)
+        for (int i = this->sz; i < newsize; ++i)
         {
-            this->sz = i + 1;
+            init = i + 1;
             this->alloc.construct(this->elem + i, val);
         }
-        for (int i = newsize; i < init; ++i)
+        for (int i = newsize; i < this->sz; ++i)
             this->alloc.destroy(this->elem + i);
         this->sz = newsize;
     }
-    catch (std::exception& e) 
-    { 
-        for (int j = 0; j < this->sz; ++j)
-            this->alloc.destroy(&this->elem[j]);
-        this->sz = 0;
-        throw e; 
-    }
     catch (...) 
     {
-        for (int j = 0; j < this->sz; ++j)
+        for (int j = 0; j < init; ++j)
             this->alloc.destroy(&this->elem[j]);
         this->sz = 0;
-        throw "unknown exception"; 
+        throw; 
     }
+}
 
 template <class T, class A>
 void vector<T, A>::push_back(const T &val)
@@ -197,19 +181,12 @@ void vector<T, A>::push_back(const T &val)
         this->alloc.construct(this->elem +this->sz, val);
         ++(this->sz);
     }
-    catch (std::exception& e) 
-    {
-        for (int j = 0; j < this->sz; ++j)
-            this->alloc.destroy(&this->elem[j]);
-        this->sz = 0;
-        throw e; 
-    }
     catch (...) 
     { 
         for (int j = 0; j < this->sz; ++j)
             this->alloc.destroy(&this->elem[j]);
         this->sz = 0;
-        throw "unknown exception"; 
+        throw; 
     }
 }
 
@@ -218,7 +195,7 @@ vector<T, A> &vector<T, A>::operator=(const vector &a)
     {
         if (this == &a)
             return *this;
-
+        int init = 0;
         if (a.sz <= this->space)
         try
         {
@@ -226,29 +203,21 @@ vector<T, A> &vector<T, A>::operator=(const vector &a)
                 this->alloc.destroy(this->elem + i);
             for (int i = 0; i < a.sz; ++i)
             {
-                this->sz = i + 1;
+                init = i + 1;
                 this->alloc.construct(this->elem + i, a.elem[i]);
             }
             this->sz = a.sz;
             return *this;
         }
-        catch (std::exception& e) 
-        { 
-            for (int j = 0; j < this->sz; ++j)
-                this->alloc.destroy(&this->elem[j]);
-            this->sz = 0;
-            throw e; 
-        }
         catch (...) 
         { 
-            for (int j = 0; j < this->sz; ++j)
+            for (int j = 0; j < init; ++j)
                 this->alloc.destroy(&this->elem[j]);
             this->sz = 0;
-            throw "unknown exception"; 
+            throw; 
         }
 
         T *p = this->alloc.allocate(a.sz);
-        int init = 0;
 
         try
         {
@@ -258,19 +227,12 @@ vector<T, A> &vector<T, A>::operator=(const vector &a)
                 this->alloc.construct(&p[i], a.elem[i]);
             }
         }
-        catch (std::exception& e) 
-        { 
-            for (int j = 0; j < init; ++j)
-                this->alloc.destroy(&p[j]);
-            this->alloc.deallocate(p, init);
-            throw e; 
-        }
         catch (...) 
         { 
             for (int j = 0; j < init; ++j)
                 this->alloc.destroy(&p[j]);
             this->alloc.deallocate(p, init);
-            throw "unknown exception"; 
+            throw; 
         }
 
         for (int i = 0; i < this->sz; ++i)
@@ -300,50 +262,44 @@ const T &vector<T, A>::at(int n) const
 
 template <class T, class A>
 vector<T, A>::vector(std::initializer_list<T> lst)
-    try
         : vector_base<T>(lst.size())
+{
+    int init = 0;
+    try
+    {
+        for (int i = 0; i < lst.size(); ++i)
         {
-            for (int i = 0; i < lst.size(); ++i)
-            {
-                this->sz = i + 1;
-                this->alloc.construct(this->elem+i, *(lst.begin() + i));
-            }
+            init = i + 1;
+            this->alloc.construct(this->elem+i, *(lst.begin() + i));
         }
-    catch (std::exception& e)
-    { 
-        for (int j = 0; j < this->sz; ++j)
-            this->alloc.destroy(&this->elem[j]);
-        this->sz = 0;
-        throw; 
     }
     catch (...) 
     { 
-        for (int j = 0; j < this->sz; ++j)
+        for (int j = 0; j < init; ++j)
             this->alloc.destroy(&this->elem[j]);
         this->sz = 0;
         throw; 
     } 
+}
 
 template <class T, class A>
 vector<T, A>::vector(int s, T val)
+    : vector_base<T>(s)
+{   
+    int init = 0;
     try
-        : vector_base<T>(s)
+    {
+        for (int i = 0; i < s; ++i)
         {
-            for (int i = 0; i < s; ++i)
-            {
-                this->alloc.construct(&this->elem[i], val);
-                this->sz = i + 1;
-            }
+            init = i + 1;
+            this->alloc.construct(&this->elem[i], val);
         }
-    catch (std::exception& e)
-    { 
-        for (int j = 0; j < this->sz; ++j)
-            this->alloc.destroy(&this->elem[j]);
-        throw; 
     }
     catch (...) 
     { 
-        for (int j = 0; j < this->sz; ++j)
+        for (int j = 0; j < init; ++j)
             this->alloc.destroy(&this->elem[j]);
+        this->sz = 0;
         throw; 
-    };
+    }
+}
